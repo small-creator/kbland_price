@@ -2,7 +2,7 @@
   "name": "kb-real-estate",
   "version": "1.0.0",
   "description": "KB부동산 검색 시스템 with Notion API",
-  "main": "index.html",
+  "main": "public/index.html",
   "scripts": {
     "dev": "vercel dev",
     "start": "vercel dev"
