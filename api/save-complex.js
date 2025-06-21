@@ -140,7 +140,7 @@ export default async function handler(req, res) {
     }
 
     if (kbPrice !== null) {
-      properties['KB시세'] = {
+      properties['KB시세'] = {  // ← 정확한 필드명으로 수정
         rich_text: [
           {
             text: {
