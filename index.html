@@ -1260,8 +1260,7 @@
         function closeLoanModal() {
             document.getElementById('loan-check-modal').classList.remove('show');
         }
-
-// 보증보험 가입여부 확인
+        // 보증보험 가입여부 확인
         async function checkInsuranceEligibility() {
             const depositInput = document.getElementById('deposit-input');
             const loanInput = document.getElementById('loan-input');
@@ -1425,10 +1424,46 @@
             await saveComplexToNotion(selectedComplex?.단지명 || '알 수 없는 단지');
         }
 
-        // Notion Database에 단지명 저장 함수 (새로 추가)
+        // Notion Database에 전체 데이터 저장 함수 (업데이트)
         async function saveComplexToNotion(complexName) {
             try {
                 console.log('💾 Notion 저장 시작:', complexName);
+                
+                // 현재 모달에서 정보 추출
+                const modalInfo = document.getElementById('modal-property-info');
+                const text = modalInfo ? modalInfo.textContent : '';
+                
+                const areaMatch = text.match(/면적: ([^|]+)/);
+                const pyeongMatch = text.match(/평수: ([^|]+)/);
+                const typeMatch = text.match(/타입: (.+)$/);
+                
+                const area = areaMatch ? areaMatch[1].trim() : '';
+                const pyeong = pyeongMatch ? pyeongMatch[1].trim().replace('평', '') : '';
+                const type = typeMatch ? typeMatch[1].trim() : '';
+                
+                // 입력된 보증금/융자금 가져오기
+                const depositInput = document.getElementById('deposit-input');
+                const loanInput = document.getElementById('loan-input');
+                const deposit = parseFloat(depositInput?.value) || 0;
+                const loan = parseFloat(loanInput?.value) || 0;
+                
+                // 결과 판단
+                const salePriceWon = selectedPriceValue;
+                const totalAmount = deposit + loan;
+                const loanRatio = (loan / salePriceWon) * 100;
+                const totalRatio = (totalAmount / salePriceWon) * 100;
+                
+                const hugEligible = loanRatio <= 60 && totalRatio <= 90 && deposit <= 70000;
+                const sgiEligible = totalRatio <= 100;
+                
+                let result = 'impossible';
+                if (hugEligible && sgiEligible) {
+                    result = 'both_possible';
+                } else if (hugEligible) {
+                    result = 'both_possible'; // HUG만 가능해도 "가능"으로 표시
+                } else if (sgiEligible) {
+                    result = 'sgi_only';
+                }
                 
                 const response = await fetch('/api/save-complex', {
                     method: 'POST',
@@ -1436,28 +1471,34 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        complexName: complexName
+                        complexName: complexName,
+                        area: area,
+                        pyeong: pyeong,
+                        type: type,
+                        salePrice: salePriceWon, // 만원 단위
+                        deposit: deposit, // 만원 단위
+                        loan: loan, // 만원 단위
+                        result: result
                     })
                 });
                 
                 console.log('📡 API 응답 상태:', response.status);
                 
-                const result = await response.json();
-                console.log('📋 API 응답 데이터:', result);
+                const resultData = await response.json();
+                console.log('📋 API 응답 데이터:', resultData);
                 
-                if (result.success) {
-                    console.log('✅ 단지명 저장 성공:', result.complexName);
+                if (resultData.success) {
+                    console.log('✅ 전체 데이터 저장 성공:', resultData.savedData);
                 } else {
-                    console.error('⚠️ 단지명 저장 실패:', result.message);
-                    console.error('상세 오류:', result.error);
+                    console.error('⚠️ 데이터 저장 실패:', resultData.message);
+                    console.error('상세 오류:', resultData.error);
                 }
                 
             } catch (error) {
-                console.error('❌ 단지명 저장 오류:', error);
+                console.error('❌ 데이터 저장 오류:', error);
                 console.error('오류 상세:', error.message);
             }
         }
-
         // 숫자 가격으로 변환
         function parseNumericPrice(price) {
             if (typeof price === 'number') {
