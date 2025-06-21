@@ -467,6 +467,49 @@
                 padding: 20px;
             }
         }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1313,17 +1356,78 @@
                 });
                 
                 console.log('📥 응답 상태:', response.status);
-                const responseData = await response.text();
+                
+                let responseData;
+                try {
+                    responseData = await response.json();
+                } catch (parseError) {
+                    const textResponse = await response.text();
+                    console.error('❌ JSON 파싱 실패:', parseError, '텍스트 응답:', textResponse);
+                    responseData = { error: 'Invalid response format', details: textResponse };
+                }
+                
                 console.log('📥 응답 데이터:', responseData);
                 
                 if (response.ok) {
-                    console.log('✅ Notion 데이터 저장 완료');
+                    console.log('✅ Notion 데이터 저장 완료:', responseData.message);
+                    // 성공 메시지를 사용자에게 표시할 수 있습니다
+                    showNotification('✅ 데이터가 노션에 저장되었습니다!', 'success');
                 } else {
                     console.error('❌ Notion 저장 실패:', response.status, responseData);
+                    showNotification(`❌ 저장 실패: ${responseData.error || '알 수 없는 오류'}`, 'error');
                 }
             } catch (error) {
                 console.error('❌ Notion 데이터 저장 실패:', error);
+                showNotification('❌ 네트워크 오류로 저장에 실패했습니다.', 'error');
             }
+        }
+
+        // 알림 표시 함수
+        function showNotification(message, type = 'info') {
+            // 기존 알림 제거
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                z-index: 10000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                animation: slideIn 0.3s ease-out;
+            `;
+
+            // 타입별 스타일
+            if (type === 'success') {
+                notification.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            } else if (type === 'error') {
+                notification.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            } else {
+                notification.style.background = 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+            }
+
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            // 3초 후 자동 제거
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.animation = 'slideOut 0.3s ease-in';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.remove();
+                        }
+                    }, 300);
+                }
+            }, 3000);
         }
 
         // 보증보험 가입여부 확인
@@ -1465,27 +1569,6 @@
                                 ${!hugCondition1 ? `<p>• 융자금 ${loanRatio.toFixed(1)}% (60% 초과)</p>` : ''}
                                 ${!hugCondition2 ? `<p>• 총 금액 ${totalRatio.toFixed(1)}% (90% 초과)</p>` : ''}
                                 ${!hugCondition3 ? `<p>• 보증금 ${formatPrice(deposit)} (7억 초과)</p>` : ''}
-                            </div>
-                        </div>
-                        
-                        <div style="background: #fef2f2; padding: 12px; border-radius: 8px;">
-                            <p style="color: #dc2626; font-weight: 600;">❌ SGI서울보증 불가 사유:</p>
-                            <div style="font-size: 0.85rem; margin-top: 5px;">
-                                <p>• 총 금액 ${totalRatio.toFixed(1)}% (100% 초과)</p>
-                            </div>
-                        </div>
-                        
-                        <div style="font-size: 0.85rem; margin-top: 15px; color: #374151; background: #f8fafc; padding: 10px; border-radius: 6px;">
-                            <p><strong>📋 가입 조건 요약:</strong></p>
-                            <p><strong>HUG:</strong> 융자금 60% 이내 + 총금액 90% 이내 + 보증금 7억 이하</p>
-                            <p><strong>SGI:</strong> 총금액 100% 이내 (보증금 한도 없음)</p>
-                        </div>
-                        
-                        <p style="font-size: 0.85rem; margin-top: 10px; font-weight: 600; color: #dc2626;">💡 보증금이나 융자금을 조정해보세요.</p>600;">❌ HUG(주택도시보증공사) 불가 사유:</p>
-                            <div style="font-size: 0.85rem; margin-top: 5px;">
-                                ${!hugCondition1 ? `<p>• 융자금 ${loanRatio.toFixed(1)}% (60% 초과)</p>` : ''}
-                                ${!hugCondition2 ? `<p>• 총 금액 ${totalRatio.toFixed(1)}% (90% 초과)</p>` : ''}
-                                ${!hugCondition3 ? `<p>• 보증금 ${formatPriceEok(deposit)} (7억 초과)</p>` : ''}
                             </div>
                         </div>
                         
