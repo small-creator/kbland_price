@@ -563,9 +563,13 @@
                     console.log('버튼 클릭됨'); 
                     console.log('함수 정의 확인:', typeof checkInsuranceEligibility);
                     try { 
+                        console.log('함수 호출 시도');
                         checkInsuranceEligibility(); 
+                        console.log('함수 호출 완료');
                     } catch(e) { 
-                        console.error('함수 오류:', e); 
+                        console.error('❌ 함수 오류:', e);
+                        console.error('❌ 오류 메시지:', e.message);
+                        console.error('❌ 오류 스택:', e.stack);
                     }
                 ">보증보험 가입여부 확인</button>
             </div>
