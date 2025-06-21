@@ -4,13 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KB부동산 검색 시스템</title>
-
-     <!-- Vercel Analytics -->
-    <script>
-        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-    </script>
-    <script defer src="/_vercel/insights/script.js"></script>
-    
     <style>
         * {
             margin: 0;
@@ -473,8 +466,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏢 아파트 보증보험 가입여부 확인</h1>
-            <p>손쉽게 아파트 전세보증보험 가입가능 여부를 확인하세요.</p>
+            <h1>🏠 KB부동산 검색 시스템</h1>
+            <p>지역별 단계적 검색으로 정확한 매매 시세를 확인하세요</p>
         </div>
 
         <div class="search-section">
@@ -1268,6 +1261,45 @@
             document.getElementById('loan-check-modal').classList.remove('show');
         }
 
+        // 억원 단위로 변환하는 함수
+        function formatToEokWon(manwon) {
+            if (!manwon || manwon === 0) return '0억';
+            const eok = manwon / 10000;
+            return eok % 1 === 0 ? `${eok}억` : `${eok.toFixed(1)}억`;
+        }
+
+        // Notion에 데이터 저장
+        async function saveToNotion(result) {
+            const deposit = parseFloat(document.getElementById('deposit-input').value) || 0;
+            const loan = parseFloat(document.getElementById('loan-input').value) || 0;
+            
+            const data = {
+                complexName: selectedComplex.단지명,
+                kbPrice: formatToEokWon(selectedPriceValue),  // 만원 → 억원
+                deposit: formatToEokWon(deposit),              // 만원 → 억원  
+                loan: formatToEokWon(loan),                    // 만원 → 억원
+                result: result
+            };
+
+            try {
+                const response = await fetch('/api/save-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Notion 데이터 저장 완료');
+                } else {
+                    console.log('❌ Notion 저장 실패:', response.status);
+                }
+            } catch (error) {
+                console.log('❌ Notion 데이터 저장 실패:', error);
+            }
+        }
+
         // 보증보험 가입여부 확인
         function checkInsuranceEligibility() {
             const depositInput = document.getElementById('deposit-input');
@@ -1400,6 +1432,7 @@
                         <p><strong>융자금:</strong> ${formatPrice(loan)} (${loanRatio.toFixed(1)}%)</p>
                         <p><strong>총 금액:</strong> ${formatPrice(totalAmount)} (${totalRatio.toFixed(1)}%)</p>
                         <hr style="margin: 10px 0; border: none; border-top: 1px solid #e5e7eb;">
+                        
                         <div style="background: #fef2f2; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
                             <p style="color: #dc2626; font-weight: 600;">❌ HUG(주택도시보증공사) 불가 사유:</p>
                             <div style="font-size: 0.85rem; margin-top: 5px;">
@@ -1408,17 +1441,41 @@
                                 ${!hugCondition3 ? `<p>• 보증금 ${formatPrice(deposit)} (7억 초과)</p>` : ''}
                             </div>
                         </div>
+                        
                         <div style="background: #fef2f2; padding: 12px; border-radius: 8px;">
                             <p style="color: #dc2626; font-weight: 600;">❌ SGI서울보증 불가 사유:</p>
                             <div style="font-size: 0.85rem; margin-top: 5px;">
                                 <p>• 총 금액 ${totalRatio.toFixed(1)}% (100% 초과)</p>
                             </div>
                         </div>
+                        
                         <div style="font-size: 0.85rem; margin-top: 15px; color: #374151; background: #f8fafc; padding: 10px; border-radius: 6px;">
                             <p><strong>📋 가입 조건 요약:</strong></p>
                             <p><strong>HUG:</strong> 융자금 60% 이내 + 총금액 90% 이내 + 보증금 7억 이하</p>
                             <p><strong>SGI:</strong> 총금액 100% 이내 (보증금 한도 없음)</p>
                         </div>
+                        
+                        <p style="font-size: 0.85rem; margin-top: 10px; font-weight: 600; color: #dc2626;">💡 보증금이나 융자금을 조정해보세요.</p>600;">❌ HUG(주택도시보증공사) 불가 사유:</p>
+                            <div style="font-size: 0.85rem; margin-top: 5px;">
+                                ${!hugCondition1 ? `<p>• 융자금 ${loanRatio.toFixed(1)}% (60% 초과)</p>` : ''}
+                                ${!hugCondition2 ? `<p>• 총 금액 ${totalRatio.toFixed(1)}% (90% 초과)</p>` : ''}
+                                ${!hugCondition3 ? `<p>• 보증금 ${formatPriceEok(deposit)} (7억 초과)</p>` : ''}
+                            </div>
+                        </div>
+                        
+                        <div style="background: #fef2f2; padding: 12px; border-radius: 8px;">
+                            <p style="color: #dc2626; font-weight: 600;">❌ SGI서울보증 불가 사유:</p>
+                            <div style="font-size: 0.85rem; margin-top: 5px;">
+                                <p>• 총 금액 ${totalRatio.toFixed(1)}% (100% 초과)</p>
+                            </div>
+                        </div>
+                        
+                        <div style="font-size: 0.85rem; margin-top: 15px; color: #374151; background: #f8fafc; padding: 10px; border-radius: 6px;">
+                            <p><strong>📋 가입 조건 요약:</strong></p>
+                            <p><strong>HUG:</strong> 융자금 60% 이내 + 총금액 90% 이내 + 보증금 7억 이하</p>
+                            <p><strong>SGI:</strong> 총금액 100% 이내 (보증금 한도 없음)</p>
+                        </div>
+                        
                         <p style="font-size: 0.85rem; margin-top: 10px; font-weight: 600; color: #dc2626;">💡 보증금이나 융자금을 조정해보세요.</p>
                     </div>
                 `;
